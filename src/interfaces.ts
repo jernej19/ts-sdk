@@ -3,19 +3,21 @@
  * ============================
  */
 
-// Enums for Match Status
+// Match Status (for matches/fixtures)
 export type MatchStatus =
-  | 'not_started'
-  | 'running'
+  | 'not_booked'
+  | 'pending'
+  | 'pre_match'
+  | 'live'
+  | 'postponed'
   | 'finished'
   | 'settled'
-  | 'canceled'
-  | 'postponed';
+  | 'canceled';
 
 // Enum for Match Type
-export type MatchType = 'best_of' | 'ow_best_of' | 'first_to';
+export type MatchType = 'best_of' | 'ow_best_of' | 'first_to' | 'red_bull_home_ground' | 'custom';
 
-// Enum for Game Status
+// Game Status (for individual games/maps within a match)
 export type GameStatus = 'not_started' | 'running' | 'finished' | 'not_played';
 
 export interface Player {

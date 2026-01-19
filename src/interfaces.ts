@@ -3,17 +3,12 @@
  * ============================
  */
 
-// Enums for Match Status (supports both Feed and REST API values)
+// Match Status (for matches/fixtures)
 export type MatchStatus =
-  // Feed statuses
-  | 'not_started'
-  | 'running'
-  // REST API statuses
   | 'not_booked'
   | 'pending'
   | 'pre_match'
   | 'live'
-  // Shared statuses
   | 'postponed'
   | 'finished'
   | 'settled'
@@ -22,7 +17,7 @@ export type MatchStatus =
 // Enum for Match Type
 export type MatchType = 'best_of' | 'ow_best_of' | 'first_to' | 'red_bull_home_ground' | 'custom';
 
-// Enum for Game Status
+// Game Status (for individual games/maps within a match)
 export type GameStatus = 'not_started' | 'running' | 'finished' | 'not_played';
 
 export interface Player {

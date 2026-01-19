@@ -447,6 +447,51 @@ export interface ScoreboardEbasketball {
   games: EbasketballGame[]; // Games within the match
 }
 
+/* --- eHockey --- */
+
+export interface EhockeyPlayer {
+  id: number; // PandaScore player ID
+  goal_score: number; // Total goals for the player (game aggregate)
+}
+
+export interface EhockeyPeriod {
+  index: number; // Period index (1..3 for regulation periods)
+  players: EhockeyPlayer[]; // Per-period goals per player
+}
+
+export interface EhockeyTimerObject {
+  timer: number; // Period timer in seconds (counts DOWN 300 → 0 each period)
+  paused: boolean; // Whether the timer is currently paused
+  issued_at: string; // ISO8601 timestamp when this snapshot was emitted
+}
+
+export interface EhockeyGame {
+  id: number; // PandaScore e-Hockey game ID
+  position: number; // Game position in the match
+  status: string; // Game status (e.g., "running", "finished")
+
+  /**
+   * Match timer object; counts DOWN:
+   * 300 → 0 each period, resets to 300 at the start of the next period.
+   * Matches JSON: { timer, paused, issued_at }
+   */
+  timer?: EhockeyTimerObject | null;
+
+  /**
+   * 1–3 represent regulation periods; values >3 represent overtime periods.
+   */
+  current_period?: number | null;
+
+  players: EhockeyPlayer[]; // Game-level player goals (aggregate)
+  periods: EhockeyPeriod[]; // Period-by-period breakdown
+}
+
+export interface ScoreboardEhockey {
+  id: number; // PandaScore match ID
+  updated_at: string; // ISO8601 UTC, e.g., "2026-01-08T11:00:50.717Z"
+  games: EhockeyGame[]; // Games within the match
+}
+
 /* --- CS:GO/CS2 --- */
 
 export interface CsMap {
@@ -572,6 +617,7 @@ export interface ScoreboardValorant {
 export type scoreboard =
   | ScoreboardEsoccer
   | ScoreboardEbasketball
+  | ScoreboardEhockey
   | ScoreboardCs
   | ScoreboardDota2
   | ScoreboardLol

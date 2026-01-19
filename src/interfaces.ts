@@ -174,7 +174,7 @@ export interface Streams {
   };
 }
 
-export interface Map {
+export interface GameMap {
   id?: number; // Map ID (for some games)
   name: string; // Map name
   slug?: string; // Map slug
@@ -213,7 +213,7 @@ export interface Game {
   draw: boolean; // Whether game ended in a draw
   forfeit: boolean; // Whether game was forfeited
   length: number | null; // Game duration in seconds
-  map: Map; // Map information
+  map: GameMap; // Map information
   number_of_rounds: number; // Number of rounds played
   rounds_score: RoundScore[] | null; // Round scores by team
   video_url: string | null; // VOD URL

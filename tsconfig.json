@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    // ⚠️ Recommended adjustments for better package compatibility
+    "target": "ES2020", // Use a modern target
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "rootDir": "./src", // Source files are in src/
+    "outDir": "./dist/lib", // ➡️ Compile package code into a 'lib' subfolder inside dist
+
+    // Critical settings for NPM package
+    "declaration": true, // Generates .d.ts files
+    "sourceMap": true, // Generates source maps
+    "declarationMap": true, // Generates declaration maps
+
+    // Path handling adjustments
+    "baseUrl": "src", // ⚠️ Removed "src" to simplify path resolution outside of 'src'
+
+    // Safety and compatibility settings
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@/*": ["*"]
+    },
+    "plugins": [
+      {
+        "transform": "typescript-transform-paths"
+      },
+      {
+        "transform": "typescript-transform-paths",
+        "afterDeclarations": true
+      }
+    ]
+  },
+  "include": ["src/**/*"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "examples" // Exclude examples from compilation
+  ]
+}

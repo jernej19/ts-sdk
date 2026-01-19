@@ -1,0 +1,59 @@
+{
+  "name": "@pandascore/odds-sdk",
+  "version": "0.0.10",
+  "description": "SDK to use Pandascore Betting Feed",
+  "main": "./dist/lib/index.js",
+  "types": "./dist/lib/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/PandaScore/pandascore-sdk-js.git"
+  },
+  "author": "Pandascore <cto@pandascore.co>",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/amqplib": "^0.10.5",
+    "@types/module-alias": "^2.0.4",
+    "@types/node": "^20.14.10",
+    "@typescript-eslint/eslint-plugin": "^7.16.0",
+    "@typescript-eslint/parser": "^7.16.0",
+    "eslint": "^9.7.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "prettier": "^3.3.3",
+    "ts-node": "^10.9.2",
+    "ts-patch": "^3.2.1",
+    "tsc-alias": "^1.8.10",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.5.3",
+    "typescript-transform-paths": "^3.4.7"
+  },
+  "scripts": {
+    "copy-examples": "cp -r examples dist/",
+    "ts-prepare": "ts-patch install -s",
+    "start": "yarn ts-prepare && ts-node ",
+    "compile": "tsc && tsc-alias",
+    "build": "yarn compile && yarn copy-examples",
+    "lint": "eslint \"src/**/*.{js,ts}\"",
+    "lint:fix": "eslint --fix \"src/**/*.{js,ts}\"",
+    "format": "prettier --write \"src/**/*.{js,ts}\""
+  },
+  "dependencies": {
+    "amqplib": "^0.10.4",
+    "axios": "^1.7.2",
+    "module-alias": "^2.2.3",
+    "path": "^0.12.7",
+    "winston": "^3.13.1"
+  },
+  "directories": {
+    "example": "examples"
+  },
+  "bugs": {
+    "url": "https://github.com/PandaScore/pandascore-sdk-js/issues"
+  },
+  "homepage": "https://github.com/PandaScore/pandascore-sdk-js#readme"
+}

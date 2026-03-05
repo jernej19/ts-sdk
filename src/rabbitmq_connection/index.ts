@@ -12,11 +12,38 @@ class RMQFeed {
   private static exchangeName = 'pandascore.feed';
   private static logger: any;
   private static eventHandler: EventHandler;
+  private static isReconnecting = false;
+  private static reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private static consecutiveFailures = 0;
+  private static readonly MAX_CONNECTIONS_WARNING_THRESHOLD = 5;
+
+  private static async cleanupExistingConnection(): Promise<void> {
+    try {
+      if (this.channel) {
+        await this.channel.close().catch(() => {});
+        this.channel = null;
+      }
+      if (this.connection) {
+        await this.connection.close().catch(() => {});
+        this.connection = null;
+      }
+    } catch {
+      // Ignore cleanup errors — connection may already be dead
+      this.channel = null;
+      this.connection = null;
+    }
+  }
 
   public static async initializeRabbitMQ(eventHandler?: EventHandler): Promise<void> {
     this.config = SDKConfig.getInstance().getConfig();
     if (!this.config) {
       throw new Error('SDK configuration is not set.');
+    }
+
+    // Prevent duplicate initialization if already connected
+    if (this.connection) {
+      this.logger?.info('RabbitMQ connection already exists, skipping initialization.');
+      return;
     }
 
     // Use provided eventHandler or create a new one
@@ -34,6 +61,7 @@ class RMQFeed {
       this.logger.info('Connected to RabbitMQ');
       this.eventHandler.startDisconnectionTimer(); // Start the heartbeat timer for disconnection detection
     } catch (error: any) {
+      this.consecutiveFailures++;
       this.logger.warn('Error connecting to RabbitMQ:', error.message);
       this.retryConnection();
     }
@@ -135,8 +163,22 @@ class RMQFeed {
   }
 
   private static retryConnection(): void {
+    if (this.isReconnecting) {
+      this.logger.debug('Reconnection already in progress, skipping duplicate retry.');
+      return;
+    }
+    this.isReconnecting = true;
+
+    // Clear any pending reconnect timer to avoid stacking retries
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+    }
+
     this.logger.info('Attempting to reconnect in 5 seconds...');
-    setTimeout(() => this.connectRabbitMQ(), 5000);
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.connectRabbitMQ();
+    }, 5000);
   }
 
   private static handleMessage = (message: any): void => {
@@ -157,6 +199,10 @@ class RMQFeed {
     if (!this.config) {
       throw new Error('SDK configuration is not set.');
     }
+
+    // Close any existing connection before creating a new one
+    await this.cleanupExistingConnection();
+
     const { company_id, email, password, feedHost } = this.config;
     const vhost = `odds/${company_id}`;
     const rabbitmqServerUrl = `amqps://${encodeURIComponent(email)}:${password}@${feedHost}/${encodeURIComponent(vhost)}`;
@@ -167,14 +213,48 @@ class RMQFeed {
       this.channel = await this.connection.createChannel();
       await this.createQueuesAndExchanges();
       this.logger.info('Connected to RabbitMQ');
+      this.isReconnecting = false; // Reset guard on success
+      this.consecutiveFailures = 0; // Reset failure counter on success
       this.eventHandler.handleReconnection(); // Call handleReconnection when connected
       this.eventHandler.startDisconnectionTimer(); // Restart timer after reconnection
+      await this.startConsumingMessages(this.handleMessage, {});
     } catch (error: any) {
+      this.consecutiveFailures++;
       this.logger.error('Error connecting to RabbitMQ:', error.message);
+
+      if (this.consecutiveFailures >= this.MAX_CONNECTIONS_WARNING_THRESHOLD) {
+        this.logger.warn(
+          `RabbitMQ connection has failed ${this.consecutiveFailures} consecutive times. ` +
+            'This may indicate the connection limit has been reached on the server. ' +
+            'Please verify your RabbitMQ connection limits and ensure no leaked connections exist.',
+        );
+      }
+
+      this.isReconnecting = false; // Reset guard so next retry can proceed
       this.retryConnection();
     }
+  }
+  /** @internal — exposed for testing only */
+  public static _resetForTest(): void {
+    this.connection = null;
+    this.channel = null;
+    this.isReconnecting = false;
+    this.consecutiveFailures = 0;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
 
-    await this.startConsumingMessages(this.handleMessage, {});
+  /** @internal — exposed for testing only */
+  public static _getState() {
+    return {
+      isReconnecting: this.isReconnecting,
+      consecutiveFailures: this.consecutiveFailures,
+      connection: this.connection,
+      channel: this.channel,
+      reconnectTimer: this.reconnectTimer,
+    };
   }
 }
 

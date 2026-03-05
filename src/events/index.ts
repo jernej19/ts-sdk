@@ -31,8 +31,13 @@ class EventHandler extends EventEmitter {
   public startDisconnectionTimer(): void {
     if (this.heartbeatTimerId !== null) {
       clearTimeout(this.heartbeatTimerId);
+      this.heartbeatTimerId = null;
     }
-    this.heartbeatTimerId = setTimeout(() => {
+    const timerId = setTimeout(() => {
+      // Only act if this timer is still the active one (not superseded)
+      if (this.heartbeatTimerId !== timerId) {
+        return;
+      }
       this.missedHeartbeats++;
       if (this.missedHeartbeats >= 3) {
         this.startDisconnectionProcedure();
@@ -40,6 +45,7 @@ class EventHandler extends EventEmitter {
         this.startDisconnectionTimer(); // Wait for next beat interval
       }
     }, 10000); // 10s = one beat interval
+    this.heartbeatTimerId = timerId;
   }
 
   public handleHeartbeat(): void {

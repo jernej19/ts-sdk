@@ -15,7 +15,6 @@ class EventHandler extends EventEmitter {
   private disconnectionStartTime: string | null = null;
   private reconnected: boolean = false;
   private heartbeatTimerId: NodeJS.Timeout | null = null;
-  private missedHeartbeats: number = 0;
   private logger: any;
 
   constructor() {
@@ -33,23 +32,16 @@ class EventHandler extends EventEmitter {
       clearTimeout(this.heartbeatTimerId);
       this.heartbeatTimerId = null;
     }
-    const timerId = setTimeout(() => {
-      // Only act if this timer is still the active one (not superseded)
-      if (this.heartbeatTimerId !== timerId) {
-        return;
-      }
-      this.missedHeartbeats++;
-      if (this.missedHeartbeats >= 3) {
-        this.startDisconnectionProcedure();
-      } else {
-        this.startDisconnectionTimer(); // Wait for next beat interval
-      }
-    }, 10000); // 10s = one beat interval
-    this.heartbeatTimerId = timerId;
+    // Single timer covering 3 missed heartbeats (3 × 10s = 30s).
+    // Each heartbeat resets this timer, so it only fires when no
+    // heartbeat has arrived for 30 consecutive seconds.
+    this.heartbeatTimerId = setTimeout(() => {
+      this.heartbeatTimerId = null;
+      this.startDisconnectionProcedure();
+    }, 30000);
   }
 
   public handleHeartbeat(): void {
-    this.missedHeartbeats = 0;
     if (this.disconnectionStartTime) {
       this.handleReconnection();
     }

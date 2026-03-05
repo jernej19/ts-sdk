@@ -49,10 +49,12 @@ Before using the SDK, you need to configure it with your credentials:
 import { PandaSDK } from '@pandascore/odds-sdk';
 
 const MySDK = PandaSDK.initialize({
-  apiToken: 'your-api-token',
-  company_id: 123,                   // your PandaScore company ID
-  email: 'you@example.com',
-  password: 'secret',
+  apiToken: '<your-api-token>', // your api token
+  apiBaseURL: '<your-api-base-url>', // ask your integration manager for the full base URL
+  feedHost: '<your-feed-host>', // ask your integration manager for the full feed URL
+  company_id: 0,  // your PandaScore company ID
+  email: '<your-email>', // your registered email
+  password: '<your-password>', // your connection password
   queues: [
     { queueName: 'my-queue', routingKey: '#' }, // add more bindings as needed
   ],
@@ -76,7 +78,7 @@ const MySDK = PandaSDK.initialize({
 To get all our messages, you can use:
 
 ```typescript
-MySDK.getRMQFeed((msg) => {
+MySDK.getRMQFeed((msg: any) => {
   console.log('Received message from RabbitMQ:', msg);
 });
 ```
@@ -177,7 +179,3 @@ marketsRange
     console.error(error);
   });
 ```
-
-### Examples
-
-You can find more example in the package source code.

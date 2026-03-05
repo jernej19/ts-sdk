@@ -24,7 +24,14 @@ const logFormat = winston.format.combine(
   winston.format.timestamp(),
   winston.format.errors({ stack: true }),
   winston.format.printf(({ timestamp, level, message, ...meta }) => {
-    const metaString = Object.keys(meta).length ? `\n${JSON.stringify(meta, null, 2)}` : '';
+    let metaString = '';
+    if (Object.keys(meta).length) {
+      try {
+        metaString = `\n${JSON.stringify(meta, null, 2)}`;
+      } catch {
+        metaString = `\n${meta.stack || meta.message || String(meta)}`;
+      }
+    }
     return `${timestamp} [${level.toUpperCase()}]: ${message}${metaString}`;
   }),
 );

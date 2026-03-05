@@ -3,21 +3,19 @@
  * ============================
  */
 
-// Match Status (for matches/fixtures)
+// Enums for Match Status
 export type MatchStatus =
-  | 'not_booked'
-  | 'pending'
-  | 'pre_match'
-  | 'live'
-  | 'postponed'
+  | 'not_started'
+  | 'running'
   | 'finished'
   | 'settled'
-  | 'canceled';
+  | 'canceled'
+  | 'postponed';
 
 // Enum for Match Type
-export type MatchType = 'best_of' | 'ow_best_of' | 'first_to' | 'red_bull_home_ground' | 'custom';
+export type MatchType = 'best_of' | 'ow_best_of' | 'first_to' | 'red_bull_home_ground';
 
-// Game Status (for individual games/maps within a match)
+// Enum for Game Status
 export type GameStatus = 'not_started' | 'running' | 'finished' | 'not_played';
 
 export interface Player {
@@ -127,7 +125,7 @@ export interface Tournament {
   end_at: string | null; // Tournament end time ISO8601
   league_id: number; // Parent league ID
   serie_id: number; // Parent series ID
-  tier: string; // Tier label (e.g., a, b, s)
+  tier: string; // Tier label (e.g., s,a,b)
   type: string; // Tournament type (e.g., online, offline)
   region: string | null; // Tournament region
   country: string | null; // Tournament country
@@ -177,7 +175,7 @@ export interface Streams {
 }
 
 export interface GameMap {
-  id?: number; // Map ID (for some games)
+  id?: number; // Map ID
   name: string; // Map name
   slug?: string; // Map slug
   image?: string; // Map image URL
@@ -221,7 +219,7 @@ export interface Game {
   video_url: string | null; // VOD URL
   winner: GameWinner; // Game winner
   winner_type: string; // Winner type ("Team" | "Player")
-  game_round_teams?: GameRoundTeam[]; // Detailed round-by-round data (optional, can be large)
+  game_round_teams?: GameRoundTeam[]; // Detailed round-by-round data
 }
 
 export interface FixtureMatch {
@@ -412,7 +410,7 @@ export interface EbasketballPlayer {
 }
 
 export interface EbasketballQuarter {
-  index: number; // Quarter index (1..4 for regulation; >4 for OT in other contexts)
+  index: number; // Quarter index (1..4 for regulation; 5 for OT in other contexts)
   players: EbasketballPlayer[]; // Per-quarter points per player
 }
 
@@ -435,7 +433,7 @@ export interface EbasketballGame {
   timer?: EbasketballTimerObject | null;
 
   /**
-   * 1–4 represent regulation quarters; values >4 represent overtime periods (OT1, OT2, …).
+   * 1–4 represent regulation quarters; value 5 represent overtime periods (OT).
    */
   current_quarter?: number | null;
 
@@ -480,7 +478,7 @@ export interface EhockeyGame {
   timer?: EhockeyTimerObject | null;
 
   /**
-   * 1–3 represent regulation periods; values >3 represent overtime periods.
+   * 1–3 represent regulation periods; No overtime in hockey.
    */
   current_period?: number | null;
 

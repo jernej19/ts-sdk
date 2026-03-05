@@ -168,6 +168,7 @@ class RMQFeed {
       await this.createQueuesAndExchanges();
       this.logger.info('Connected to RabbitMQ');
       this.eventHandler.handleReconnection(); // Call handleReconnection when connected
+      this.eventHandler.startDisconnectionTimer(); // Restart timer after reconnection
     } catch (error: any) {
       this.logger.error('Error connecting to RabbitMQ:', error.message);
       this.retryConnection();

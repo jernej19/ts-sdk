@@ -62,7 +62,7 @@ class RMQFeed {
       this.eventHandler.startDisconnectionTimer(); // Start the heartbeat timer for disconnection detection
     } catch (error: any) {
       this.consecutiveFailures++;
-      this.logger.warn('Error connecting to RabbitMQ:', error.message || error);
+      this.logger.warn(`Error connecting to RabbitMQ: ${error.message || error}`);
       this.retryConnection();
     }
   }
@@ -138,7 +138,7 @@ class RMQFeed {
 
               channel.ack(msg);
             } catch (err: any) {
-              logger.error('Error processing message:', err.message);
+              logger.error(`Error processing message: ${err.message}`);
               channel.reject(msg, false);
             }
           }
@@ -158,7 +158,7 @@ class RMQFeed {
   }
 
   private static async handleChannelError(error: Error): Promise<void> {
-    this.logger.warn('Channel error:', error.message);
+    this.logger.warn(`Channel error: ${error.message}`);
     this.retryConnection();
   }
 
@@ -191,7 +191,7 @@ class RMQFeed {
       const fullMessage = JSON.stringify(message, null, 2);
       console.log('Received message from RabbitMQ:', fullMessage);
     } catch (err: any) {
-      this.logger.error('Error processing message:', err.message);
+      this.logger.error(`Error processing message: ${err.message}`);
     }
   };
 
@@ -220,7 +220,7 @@ class RMQFeed {
       await this.startConsumingMessages(this.handleMessage, {});
     } catch (error: any) {
       this.consecutiveFailures++;
-      this.logger.error('Error connecting to RabbitMQ:', error.message || error);
+      this.logger.error(`Error connecting to RabbitMQ: ${error.message || error}`);
 
       if (this.consecutiveFailures >= this.MAX_CONNECTIONS_WARNING_THRESHOLD) {
         this.logger.warn(

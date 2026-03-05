@@ -92,59 +92,57 @@ class RMQFeed {
       return;
     }
 
-    for (const queueConfig of this.config.queues) {
-      const { queueName } = queueConfig;
-      const consumerTag = `${this.config!.email}_${queueName}`; // Unique consumer tag per queue
+    // Capture references in closure variables to avoid 'this' binding issues
+    // inside the async consume callback
+    const eventHandler = this.eventHandler;
+    const logger = this.logger;
+    const channel = this.channel;
+    const config = this.config;
 
-      this.channel.consume(
+    for (const queueConfig of config.queues) {
+      const { queueName } = queueConfig;
+      const consumerTag = `${config.email}_${queueName}`; // Unique consumer tag per queue
+
+      channel.consume(
         queueName,
         async (msg) => {
           if (msg !== null) {
             try {
               let message = JSON.parse(msg.content.toString());
 
-              // Any message from RabbitMQ proves the connection is alive
-              this.eventHandler.handleHeartbeat();
+              // Any message from RabbitMQ proves the connection is alive — reset disconnection timer
+              eventHandler.handleHeartbeat();
 
-              // Check if this is a heartbeat message (has 'at' property and no 'type')
-              const isHeartbeat = message.at && Object.keys(message).length === 1;
-              if (isHeartbeat) {
-                this.logger.debug('Received heartbeat message:', message);
-
-                // Acknowledge the heartbeat message
-                this.channel!.ack(msg);
-                return; // Don't forward heartbeats to user callback
+              // Heartbeat-only messages have a single 'at' field — filter them from user callback
+              if (message.at && Object.keys(message).length === 1) {
+                logger.debug('Received heartbeat message:', message);
+                channel.ack(msg);
+                return;
               }
 
               // For non-heartbeat messages, process normally
-              // Enrich message markets with the selected odds formats from the config
               if (message.markets) {
-                const oddsFormats = this.config?.oddsFormat || [];
+                const oddsFormats = config?.oddsFormat || [];
                 message.markets = enrichSelectionsWithOdds(message.markets, oddsFormats);
               }
 
-              // Apply limits if necessary
               message =
-                this.config && options && options.addLimits ? calculateLimitsForMessage(message, undefined) : message;
+                config && options && options.addLimits ? calculateLimitsForMessage(message, undefined) : message;
 
               handleMessageCallback(message);
 
-              // Log the received message (non-heartbeats)
               if (Object.prototype.hasOwnProperty.call(message, 'type')) {
-                this.logger.debug('Received message from RabbitMQ:', message);
+                logger.debug('Received message from RabbitMQ:', message);
               }
 
-              // Acknowledge the message
-              this.channel!.ack(msg);
+              channel.ack(msg);
             } catch (err: any) {
-              this.logger.error('Error processing message:', err.message);
-
-              // Reject the message
-              this.channel!.reject(msg, false);
+              logger.error('Error processing message:', err.message);
+              channel.reject(msg, false);
             }
           }
         },
-        { consumerTag }, // Assign the unique consumer tag here
+        { consumerTag },
       );
     }
 

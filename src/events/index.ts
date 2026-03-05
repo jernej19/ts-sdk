@@ -56,7 +56,7 @@ class EventHandler extends EventEmitter {
         code: 100,
         message: `Disconnection detected at ${this.disconnectionStartTime}.`,
       };
-      this.logger.warn(notification.message); // Log disconnection warning
+      this.logger.error(notification.message);
       this.emit('notification', notification);
     }
   }
@@ -64,35 +64,36 @@ class EventHandler extends EventEmitter {
   public async handleReconnection(): Promise<void> {
     if (this.disconnectionStartTime && !this.reconnected) {
       this.reconnected = true;
+      const disconnectedAt = this.disconnectionStartTime;
       const reconnectionTime = new Date().toISOString();
-      
+
+      // Always emit reconnection notification, even if recovery fails
+      const reconnectionNotification: Notification = {
+        type: 'reconnection',
+        code: 101,
+        message: `Reconnection successful at ${reconnectionTime}.`,
+      };
+
       // Check if recovery/backfill is enabled (default: true)
       const shouldRecover = this.config.recoverOnReconnect !== false;
-      
+
       try {
         let recoveryData: any = null;
         let modifiedMatches: any = null;
 
         if (shouldRecover) {
-          // Perform backfill only if enabled
-          recoveryData = await Matches.recoverMarkets(this.disconnectionStartTime);
-          modifiedMatches = await Matches.fetchMatchesRange(this.disconnectionStartTime, reconnectionTime, true);
-        }
-
-        const reconnectionNotification: Notification = {
-          type: 'reconnection',
-          code: 101,
-          message: `Reconnection successful at ${reconnectionTime}.`,
-          recoveryData: shouldRecover ? {
+          recoveryData = await Matches.recoverMarkets(disconnectedAt);
+          modifiedMatches = await Matches.fetchMatchesRange(disconnectedAt, reconnectionTime, true);
+          reconnectionNotification.recoveryData = {
             markets: recoveryData,
             modifiedMatches: modifiedMatches,
-          } : undefined,
-        };
-        this.emit('notification', reconnectionNotification);
-        this.logger.info(reconnectionNotification.message);
+          };
+        }
       } catch (error) {
         this.logger.error('Error during recovery process:', error);
       } finally {
+        this.logger.info(reconnectionNotification.message);
+        this.emit('notification', reconnectionNotification);
         this.disconnectionStartTime = null;
         this.reconnected = false;
       }

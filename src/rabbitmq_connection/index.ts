@@ -51,7 +51,7 @@ class RMQFeed {
     this.logger = setupLogger(this.config);
     const { company_id, email, password, feedHost } = this.config;
     const vhost = `odds/${company_id}`;
-    const rabbitmqServerUrl = `amqps://${encodeURIComponent(email)}:${password}@${feedHost}/${encodeURIComponent(vhost)}`;
+    const rabbitmqServerUrl = `amqps://${encodeURIComponent(email)}:${encodeURIComponent(password)}@${feedHost}/${encodeURIComponent(vhost)}`;
 
     try {
       this.connection = await amqp.connect(rabbitmqServerUrl);
@@ -62,7 +62,7 @@ class RMQFeed {
       this.eventHandler.startDisconnectionTimer(); // Start the heartbeat timer for disconnection detection
     } catch (error: any) {
       this.consecutiveFailures++;
-      this.logger.warn('Error connecting to RabbitMQ:', error.message);
+      this.logger.warn('Error connecting to RabbitMQ:', error.message || error);
       this.retryConnection();
     }
   }
@@ -205,7 +205,7 @@ class RMQFeed {
 
     const { company_id, email, password, feedHost } = this.config;
     const vhost = `odds/${company_id}`;
-    const rabbitmqServerUrl = `amqps://${encodeURIComponent(email)}:${password}@${feedHost}/${encodeURIComponent(vhost)}`;
+    const rabbitmqServerUrl = `amqps://${encodeURIComponent(email)}:${encodeURIComponent(password)}@${feedHost}/${encodeURIComponent(vhost)}`;
 
     try {
       this.connection = await amqp.connect(rabbitmqServerUrl);
@@ -220,7 +220,7 @@ class RMQFeed {
       await this.startConsumingMessages(this.handleMessage, {});
     } catch (error: any) {
       this.consecutiveFailures++;
-      this.logger.error('Error connecting to RabbitMQ:', error.message);
+      this.logger.error('Error connecting to RabbitMQ:', error.message || error);
 
       if (this.consecutiveFailures >= this.MAX_CONNECTIONS_WARNING_THRESHOLD) {
         this.logger.warn(

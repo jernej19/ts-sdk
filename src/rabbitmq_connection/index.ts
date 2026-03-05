@@ -103,9 +103,10 @@ class RMQFeed {
       const { queueName } = queueConfig;
       const consumerTag = `${config.email}_${queueName}`; // Unique consumer tag per queue
 
+      logger.info(`Started consuming on queue: ${queueName} with consumer tag: ${consumerTag}`);
       channel.consume(
         queueName,
-        async (msg) => {
+        async (msg: amqp.ConsumeMessage | null) => {
           if (msg !== null) {
             try {
               let message = JSON.parse(msg.content.toString());

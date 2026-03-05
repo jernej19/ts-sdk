@@ -32,6 +32,7 @@ class EventHandler extends EventEmitter {
       clearTimeout(this.heartbeatTimerId);
       this.heartbeatTimerId = null;
     }
+    this.logger.info('Starting disconnection timer...');
     // Single timer covering 3 missed heartbeats (3 × 10s = 30s).
     // Each heartbeat resets this timer, so it only fires when no
     // heartbeat has arrived for 30 consecutive seconds.

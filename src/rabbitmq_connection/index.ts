@@ -51,7 +51,8 @@ class RMQFeed {
     this.logger = setupLogger(this.config);
     const { company_id, email, password, feedHost } = this.config;
     const vhost = `odds/${company_id}`;
-    const rabbitmqServerUrl = `amqps://${encodeURIComponent(email)}:${encodeURIComponent(password)}@${feedHost}/${encodeURIComponent(vhost)}`;
+    const rabbitmqServerUrl = `amqps://${encodeURIComponent(email)}:${password}@${feedHost}/${encodeURIComponent(vhost)}`;
+    this.logger.debug(`Connecting to RabbitMQ: amqps://${encodeURIComponent(email)}:***@${feedHost}/${encodeURIComponent(vhost)}`);
 
     try {
       this.connection = await amqp.connect(rabbitmqServerUrl);
@@ -205,7 +206,7 @@ class RMQFeed {
 
     const { company_id, email, password, feedHost } = this.config;
     const vhost = `odds/${company_id}`;
-    const rabbitmqServerUrl = `amqps://${encodeURIComponent(email)}:${encodeURIComponent(password)}@${feedHost}/${encodeURIComponent(vhost)}`;
+    const rabbitmqServerUrl = `amqps://${encodeURIComponent(email)}:${password}@${feedHost}/${encodeURIComponent(vhost)}`;
 
     try {
       this.connection = await amqp.connect(rabbitmqServerUrl);

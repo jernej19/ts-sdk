@@ -36,9 +36,9 @@
   "scripts": {
     "copy-examples": "cp -r examples dist/",
     "ts-prepare": "ts-patch install -s",
-    "start": "yarn ts-prepare && ts-node ",
+    "start": "ts-patch install -s && ts-node ",
     "compile": "tsc && tsc-alias",
-    "build": "yarn compile && yarn copy-examples",
+    "build": "tsc && tsc-alias && cp -r examples dist/",
     "lint": "eslint \"src/**/*.{js,ts}\"",
     "lint:fix": "eslint --fix \"src/**/*.{js,ts}\"",
     "format": "prettier --write \"src/**/*.{js,ts}\"",

@@ -12,38 +12,11 @@ class RMQFeed {
   private static exchangeName = 'pandascore.feed';
   private static logger: any;
   private static eventHandler: EventHandler;
-  private static isReconnecting = false;
-  private static reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private static consecutiveFailures = 0;
-  private static readonly MAX_CONNECTIONS_WARNING_THRESHOLD = 5;
-
-  private static async cleanupExistingConnection(): Promise<void> {
-    try {
-      if (this.channel) {
-        await this.channel.close().catch(() => {});
-        this.channel = null;
-      }
-      if (this.connection) {
-        await this.connection.close().catch(() => {});
-        this.connection = null;
-      }
-    } catch {
-      // Ignore cleanup errors — connection may already be dead
-      this.channel = null;
-      this.connection = null;
-    }
-  }
 
   public static async initializeRabbitMQ(eventHandler?: EventHandler): Promise<void> {
     this.config = SDKConfig.getInstance().getConfig();
     if (!this.config) {
       throw new Error('SDK configuration is not set.');
-    }
-
-    // Prevent duplicate initialization if already connected
-    if (this.connection) {
-      this.logger?.info('RabbitMQ connection already exists, skipping initialization.');
-      return;
     }
 
     // Use provided eventHandler or create a new one
@@ -52,7 +25,6 @@ class RMQFeed {
     const { company_id, email, password, feedHost } = this.config;
     const vhost = `odds/${company_id}`;
     const rabbitmqServerUrl = `amqps://${encodeURIComponent(email)}:${password}@${feedHost}/${encodeURIComponent(vhost)}`;
-    this.logger.debug(`Connecting to RabbitMQ: amqps://${encodeURIComponent(email)}:***@${feedHost}/${encodeURIComponent(vhost)}`);
 
     try {
       this.connection = await amqp.connect(rabbitmqServerUrl);
@@ -62,7 +34,6 @@ class RMQFeed {
       this.logger.info('Connected to RabbitMQ');
       this.eventHandler.startDisconnectionTimer(); // Start the heartbeat timer for disconnection detection
     } catch (error: any) {
-      this.consecutiveFailures++;
       this.logger.warn(`Error connecting to RabbitMQ: ${error.message || error}`);
       this.retryConnection();
     }
@@ -93,58 +64,58 @@ class RMQFeed {
       return;
     }
 
-    // Capture references in closure variables to avoid 'this' binding issues
-    // inside the async consume callback
-    const eventHandler = this.eventHandler;
-    const logger = this.logger;
-    const channel = this.channel;
-    const config = this.config;
-
-    for (const queueConfig of config.queues) {
+    for (const queueConfig of this.config.queues) {
       const { queueName } = queueConfig;
-      const consumerTag = `${config.email}_${queueName}`; // Unique consumer tag per queue
+      const consumerTag = `${this.config!.email}_${queueName}`; // Unique consumer tag per queue
 
-      logger.info(`Started consuming on queue: ${queueName} with consumer tag: ${consumerTag}`);
-      channel.consume(
+      this.channel.consume(
         queueName,
-        async (msg: amqp.ConsumeMessage | null) => {
+        async (msg) => {
           if (msg !== null) {
             try {
               let message = JSON.parse(msg.content.toString());
 
-              // Any message from RabbitMQ proves the connection is alive — reset disconnection timer
-              eventHandler.handleHeartbeat();
-
-              // Heartbeat-only messages have a single 'at' field — filter them from user callback
-              if (message.at && Object.keys(message).length === 1) {
-                logger.debug('Received heartbeat message:', message);
-                channel.ack(msg);
-                return;
+              // Check if this is a heartbeat message (has 'at' property and no 'type')
+              if (message.at && !message.type) {
+                // This is a heartbeat message - reset the disconnection timer
+                this.eventHandler.handleHeartbeat();
+                console.log('Received heartbeat message:', message);
+                this.logger.debug('Received heartbeat message:', message);
+                // Acknowledge the heartbeat message
+                this.channel!.ack(msg);
+                return; // Don't process further
               }
 
               // For non-heartbeat messages, process normally
+              // Enrich message markets with the selected odds formats from the config
               if (message.markets) {
-                const oddsFormats = config?.oddsFormat || [];
+                const oddsFormats = this.config?.oddsFormat || [];
                 message.markets = enrichSelectionsWithOdds(message.markets, oddsFormats);
               }
 
+              // Apply limits if necessary
               message =
-                config && options && options.addLimits ? calculateLimitsForMessage(message, undefined) : message;
+                this.config && options && options.addLimits
+                  ? calculateLimitsForMessage(message, undefined)
+                  : message;
 
               handleMessageCallback(message);
 
+              // Log the received message (non-heartbeats)
               if (Object.prototype.hasOwnProperty.call(message, 'type')) {
-                logger.debug('Received message from RabbitMQ:', message);
+                this.logger.debug('Received message from RabbitMQ:', message);
               }
 
-              channel.ack(msg);
+              // Acknowledge the message
+              this.channel!.ack(msg);
             } catch (err: any) {
-              logger.error(`Error processing message: ${err.message}`);
-              channel.reject(msg, false);
+              this.logger.error(`Error processing message: ${err.message}`);
+              // Reject the message
+              this.channel!.reject(msg, false);
             }
           }
         },
-        { consumerTag },
+        { consumerTag }, // Assign the unique consumer tag here
       );
     }
 
@@ -164,22 +135,8 @@ class RMQFeed {
   }
 
   private static retryConnection(): void {
-    if (this.isReconnecting) {
-      this.logger.debug('Reconnection already in progress, skipping duplicate retry.');
-      return;
-    }
-    this.isReconnecting = true;
-
-    // Clear any pending reconnect timer to avoid stacking retries
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-    }
-
     this.logger.info('Attempting to reconnect in 5 seconds...');
-    this.reconnectTimer = setTimeout(() => {
-      this.reconnectTimer = null;
-      this.connectRabbitMQ();
-    }, 5000);
+    setTimeout(() => this.connectRabbitMQ(), 5000);
   }
 
   private static handleMessage = (message: any): void => {
@@ -201,9 +158,6 @@ class RMQFeed {
       throw new Error('SDK configuration is not set.');
     }
 
-    // Close any existing connection before creating a new one
-    await this.cleanupExistingConnection();
-
     const { company_id, email, password, feedHost } = this.config;
     const vhost = `odds/${company_id}`;
     const rabbitmqServerUrl = `amqps://${encodeURIComponent(email)}:${password}@${feedHost}/${encodeURIComponent(vhost)}`;
@@ -214,48 +168,14 @@ class RMQFeed {
       this.channel = await this.connection.createChannel();
       await this.createQueuesAndExchanges();
       this.logger.info('Connected to RabbitMQ');
-      this.isReconnecting = false; // Reset guard on success
-      this.consecutiveFailures = 0; // Reset failure counter on success
       this.eventHandler.handleReconnection(); // Call handleReconnection when connected
       this.eventHandler.startDisconnectionTimer(); // Restart timer after reconnection
-      await this.startConsumingMessages(this.handleMessage, {});
     } catch (error: any) {
-      this.consecutiveFailures++;
       this.logger.error(`Error connecting to RabbitMQ: ${error.message || error}`);
-
-      if (this.consecutiveFailures >= this.MAX_CONNECTIONS_WARNING_THRESHOLD) {
-        this.logger.warn(
-          `RabbitMQ connection has failed ${this.consecutiveFailures} consecutive times. ` +
-            'This may indicate the connection limit has been reached on the server. ' +
-            'Please verify your RabbitMQ connection limits and ensure no leaked connections exist.',
-        );
-      }
-
-      this.isReconnecting = false; // Reset guard so next retry can proceed
       this.retryConnection();
     }
-  }
-  /** @internal — exposed for testing only */
-  public static _resetForTest(): void {
-    this.connection = null;
-    this.channel = null;
-    this.isReconnecting = false;
-    this.consecutiveFailures = 0;
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-  }
 
-  /** @internal — exposed for testing only */
-  public static _getState() {
-    return {
-      isReconnecting: this.isReconnecting,
-      consecutiveFailures: this.consecutiveFailures,
-      connection: this.connection,
-      channel: this.channel,
-      reconnectTimer: this.reconnectTimer,
-    };
+    await this.startConsumingMessages(this.handleMessage, {});
   }
 }
 

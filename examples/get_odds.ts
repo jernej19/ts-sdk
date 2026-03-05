@@ -11,6 +11,6 @@ const MySDK = PandaSDK.initialize({
   },
 });
 
-MySDK.getRMQFeed((msg) => {
+MySDK.getRMQFeed((msg: any) => {
   console.log('Received message from RabbitMQ:', msg);
 });

@@ -103,16 +103,17 @@ class RMQFeed {
             try {
               let message = JSON.parse(msg.content.toString());
 
+              // Any message from RabbitMQ proves the connection is alive
+              this.eventHandler.handleHeartbeat();
+
               // Check if this is a heartbeat message (has 'at' property and no 'type')
-              if (message.at && !message.type) {
-                // This is a heartbeat message - reset the disconnection timer
-                this.eventHandler.handleHeartbeat();
-                console.log('Received heartbeat message:', message);
+              const isHeartbeat = message.at && Object.keys(message).length === 1;
+              if (isHeartbeat) {
                 this.logger.debug('Received heartbeat message:', message);
 
                 // Acknowledge the heartbeat message
                 this.channel!.ack(msg);
-                return; // Don't process further
+                return; // Don't forward heartbeats to user callback
               }
 
               // For non-heartbeat messages, process normally

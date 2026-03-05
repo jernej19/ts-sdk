@@ -30,7 +30,8 @@
     "tsc-alias": "^1.8.10",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.5.3",
-    "typescript-transform-paths": "^3.4.7"
+    "typescript-transform-paths": "^3.4.7",
+    "vitest": "^4.0.18"
   },
   "scripts": {
     "copy-examples": "cp -r examples dist/",
@@ -40,7 +41,9 @@
     "build": "yarn compile && yarn copy-examples",
     "lint": "eslint \"src/**/*.{js,ts}\"",
     "lint:fix": "eslint --fix \"src/**/*.{js,ts}\"",
-    "format": "prettier --write \"src/**/*.{js,ts}\""
+    "format": "prettier --write \"src/**/*.{js,ts}\"",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "amqplib": "^0.10.4",
